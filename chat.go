@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 )
 
 // Chat message role defined by the OpenAI API.
@@ -136,12 +137,22 @@ type ChatCompletionChoice struct {
 
 // ChatCompletionResponse represents a response structure for chat completion API.
 type ChatCompletionResponse struct {
-	ID      string                 `json:"id"`
-	Object  string                 `json:"object"`
-	Created int64                  `json:"created"`
-	Model   string                 `json:"model"`
-	Choices []ChatCompletionChoice `json:"choices"`
-	Usage   Usage                  `json:"usage"`
+	ID           string                 `json:"id"`
+	Object       string                 `json:"object"`
+	Created      int64                  `json:"created"`
+	Model        string                 `json:"model"`
+	Choices      []ChatCompletionChoice `json:"choices"`
+	Usage        Usage                  `json:"usage"`
+	RateLimiting RateLimiting           `json:"rate_limiting"`
+}
+
+type RateLimiting struct {
+	LimitRequests     int           `json:"x-ratelimit-limit-requests"`
+	LimitTokens       int           `json:"x-ratelimit-limit-tokens"`
+	RemainingRequests int           `json:"x-ratelimit-remaining-requests"`
+	RemainingTokens   int           `json:"x-ratelimit-remaining-tokens"`
+	ResetRequests     time.Duration `json:"x-ratelimit-reset-requests"`
+	ResetTokens       time.Duration `json:"x-ratelimit-reset-tokens"`
 }
 
 // CreateChatCompletion — API call to Create a completion for the chat message.

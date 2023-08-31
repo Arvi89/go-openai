@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	utils "github.com/sashabaranov/go-openai/internal"
 )
@@ -96,6 +98,7 @@ func (c *Client) sendRequest(req *http.Request, v any) error {
 	if err != nil {
 		return err
 	}
+	c.addRateLimiting(res, v)
 
 	defer res.Body.Close()
 
@@ -104,6 +107,28 @@ func (c *Client) sendRequest(req *http.Request, v any) error {
 	}
 
 	return decodeResponse(res.Body, v)
+}
+
+func (c *Client) addRateLimiting(httpResponse *http.Response, v any) {
+	var rl = RateLimiting{}
+	i, _ := strconv.Atoi(httpResponse.Header.Get("x-ratelimit-limit-requests"))
+	rl.LimitRequests = i
+	i, _ = strconv.Atoi(httpResponse.Header.Get("x-ratelimit-limit-tokens"))
+	rl.LimitTokens = i
+	i, _ = strconv.Atoi(httpResponse.Header.Get("x-ratelimit-remaining-requests"))
+	rl.RemainingRequests = i
+	i, _ = strconv.Atoi(httpResponse.Header.Get("x-ratelimit-remaining-tokens"))
+	rl.RemainingTokens = i
+	d, _ := time.ParseDuration(httpResponse.Header.Get("x-ratelimit-reset-requests"))
+	rl.ResetRequests = d
+	d, _ = time.ParseDuration(httpResponse.Header.Get("x-ratelimit-reset-tokens"))
+	rl.ResetTokens = d
+	switch v.(type) {
+	case *ChatCompletionResponse:
+		resp := v.(*ChatCompletionResponse)
+		resp.RateLimiting = rl
+		v = resp
+	}
 }
 
 func (c *Client) sendRequestRaw(req *http.Request) (body io.ReadCloser, err error) {
